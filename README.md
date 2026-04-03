@@ -1,73 +1,44 @@
 # Stellar Soroban Utilities
 
-> Powering Smarter Smart Contracts.
+> Stop rewriting boilerplate. Start shipping contracts.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![npm](https://img.shields.io/badge/npm-0.1.0-blue)](https://www.npmjs.com/package/stellar-soroban-utilities)
 [![Rust](https://img.shields.io/badge/rust-soroban--sdk%2020-orange)](https://crates.io/crates/soroban-utilities)
 
-Stellar Soroban Utilities is a lightweight collection of helper libraries and developer tools designed to simplify interaction with smart contracts on Soroban — Stellar's smart contract platform. It provides essential building blocks that reduce complexity, improve code efficiency, and accelerate development workflows.
+A dual-language toolkit (TypeScript + Rust) that handles the repetitive parts of Soroban smart contract development — so you can focus on what actually matters.
 
 ---
 
-## The Problem
+## What's Inside
 
-Developers building on Soroban repeatedly run into the same friction points:
-
-- Repetitive low-level logic for transactions and contract calls
-- No standardized helper functions across projects
-- Time-consuming debugging and testing processes
-- Fragmented developer experience across tools
-
-These inefficiencies slow down development and increase the risk of errors.
-
----
-
-## Objective
-
-Build a utility-first toolkit that:
-
-- Simplifies common Soroban development tasks
-- Provides reusable, well-tested helper functions
-- Improves developer productivity and code reliability
-- Enhances the overall developer experience on Stellar
-
----
-
-## Packages
-
-| Package | Language | Description |
+| Package | Language | Purpose |
 |---|---|---|
-| `packages/js` | TypeScript | NPM utility library — contract interaction, encoding, fee estimation, testing |
-| `packages/rust` | Rust | Reusable Soroban contract helpers — access control, math, events, validation |
+| `packages/js` | TypeScript | Contract invocation, XDR encoding, fee estimation, test helpers, SEP-41 tokens |
+| `packages/rust` | Rust | Access control, safe math, event emitters, input validation |
 
 ---
 
-## Core Features
+## Installation
 
-### 1. Contract Interaction Helpers
-Simplified functions for invoking Soroban contracts, building transactions, and handling events — without writing boilerplate every time.
+**TypeScript / JavaScript**
 
-### 2. Data Encoding & Decoding
-Tools for handling Soroban data structures (XDR, SCVal). Serialize and deserialize native JS values to/from contract-compatible types with a single function call.
+```bash
+npm install stellar-soroban-utilities
+```
 
-### 3. Testing & Debugging Tools
-Friendbot account funding, transaction confirmation polling, simulation assertion helpers, and event logging — everything you need to iterate fast on testnet.
+**Rust** — add to `Cargo.toml`:
 
-### 4. Fee & Gas Optimization Utilities
-Simulate transactions before signing to get accurate fee breakdowns. Includes base fee, inclusion fee, and resource fee estimates.
+```toml
+[dependencies]
+soroban-utilities = "0.1.0"
+```
 
 ---
 
 ## Quick Start
 
-### TypeScript / JavaScript
-
-```bash
-cd packages/js
-npm install
-npm run build
-```
+### TypeScript
 
 ```typescript
 import {
@@ -77,7 +48,7 @@ import {
   estimateFee,
   createTestAccount,
 } from 'stellar-soroban-utilities';
-import { Keypair, Networks, TransactionBuilder } from '@stellar/stellar-sdk';
+import { Networks, TransactionBuilder } from '@stellar/stellar-sdk';
 
 // Fund a test account via Friendbot
 const keypair = await createTestAccount();
@@ -91,7 +62,7 @@ const xdr = await buildContractInvocation({
   networkPassphrase: Networks.TESTNET,
 });
 
-// Estimate fees before signing
+// Check fees before committing
 const fees = await estimateFee(xdr);
 console.log('Total fee:', fees.totalFee, 'stroops');
 
@@ -104,13 +75,6 @@ console.log('Status:', result.status);
 
 ### Rust
 
-Add to your `Cargo.toml`:
-
-```toml
-[dependencies]
-soroban-utilities = "0.1.0"
-```
-
 ```rust
 use soroban_utilities::{access, math, validation, events};
 
@@ -121,44 +85,12 @@ pub fn initialize(env: Env, admin: Address) {
 pub fn transfer(env: Env, caller: Address, to: Address, amount: i128) {
     access::require_admin(&env, &caller);
     validation::require_positive(amount);
+
     let fee = math::basis_points(amount, 250); // 2.5%
     let net = math::safe_sub(amount, fee);
+
     events::emit_transfer(&env, &caller, &to, net);
 }
-```
-
----
-
-## Project Structure
-
-```
-Stellar-Soroban-Utilities/
-├── packages/
-│   ├── js/
-│   │   ├── src/
-│   │   │   ├── contract.ts     # Contract invocation & submission
-│   │   │   ├── encoding.ts     # XDR / ScVal encode & decode
-│   │   │   ├── fees.ts         # Fee estimation
-│   │   │   ├── testing.ts      # Test helpers & Friendbot
-│   │   │   ├── token.ts        # SEP-41 token helpers
-│   │   │   ├── errors.ts       # Error parsing
-│   │   │   └── index.ts        # Package entry point
-│   │   ├── package.json
-│   │   ├── tsconfig.json
-│   │   └── jest.config.js
-│   └── rust/
-│       ├── src/
-│       │   ├── lib.rs
-│       │   ├── access.rs       # Admin access control
-│       │   ├── math.rs         # Safe arithmetic & basis points
-│       │   ├── events.rs       # Event emitters
-│       │   └── validation.rs   # Input validation
-│       └── Cargo.toml
-├── examples/
-│   ├── invoke-contract.ts
-│   └── encoding-demo.ts
-├── CONTRIBUTING.md
-└── README.md
 ```
 
 ---
@@ -167,7 +99,11 @@ Stellar-Soroban-Utilities/
 
 ### TypeScript
 
-#### `buildContractInvocation(options)`
+#### Contract
+
+```typescript
+buildContractInvocation(options)
+```
 Builds a simulated, fee-accurate unsigned transaction XDR for a Soroban contract call.
 
 | Option | Type | Default | Description |
@@ -179,51 +115,74 @@ Builds a simulated, fee-accurate unsigned transaction XDR for a Soroban contract
 | `networkPassphrase` | `string` | TESTNET | Network passphrase |
 | `rpcUrl` | `string` | testnet RPC | Soroban RPC endpoint |
 
-#### `toScVal(value)` / `fromScVal(scVal)`
-Convert between native JS values and Soroban `ScVal` types. Supports strings, numbers, booleans, bigints, and objects.
+```typescript
+submitAndConfirm(txXdr)
+```
+Submits a signed transaction and polls until confirmed. Returns `{ status, result }`.
 
-#### `estimateFee(txXdr)`
-Returns `{ baseFee, inclusionFee, resourceFee, totalFee }` by simulating the transaction.
+#### Encoding
 
-#### `createTestAccount()`
-Generates a random keypair and funds it via Friendbot. Returns the funded `Keypair`.
+```typescript
+toScVal(value)    // JS → Soroban ScVal
+fromScVal(scVal)  // Soroban ScVal → JS
+```
+Supports strings, numbers, booleans, bigints, and plain objects.
 
-#### `buildTokenTransfer(opts, from, to, amount)`
-Build an unsigned SEP-41 token transfer transaction.
+#### Fees
 
-#### `buildTokenMint(opts, to, amount)`
-Build an unsigned token mint transaction (requires admin).
+```typescript
+estimateFee(txXdr)
+// Returns: { baseFee, inclusionFee, resourceFee, totalFee }
+```
+
+#### Testing
+
+```typescript
+createTestAccount()
+// Generates a random keypair and funds it via Friendbot. Returns Keypair.
+```
+
+#### Tokens (SEP-41)
+
+```typescript
+buildTokenTransfer(opts, from, to, amount)
+buildTokenMint(opts, to, amount)  // requires admin
+```
 
 ---
 
 ### Rust
 
 #### `access`
+
 | Function | Description |
 |---|---|
-| `set_admin(env, admin)` | Store admin address in contract storage |
-| `get_admin(env)` | Retrieve the stored admin address |
+| `set_admin(env, admin)` | Store admin address |
+| `get_admin(env)` | Retrieve admin address |
 | `require_admin(env, caller)` | Panic if caller is not admin |
 | `is_admin(env, address)` | Check admin without panicking |
 
 #### `math`
+
 | Function | Description |
 |---|---|
 | `safe_add(a, b)` | Overflow-safe addition |
 | `safe_sub(a, b)` | Underflow-safe subtraction |
 | `safe_mul(a, b)` | Overflow-safe multiplication |
 | `safe_div(a, b)` | Division with zero-check |
-| `basis_points(amount, bps)` | Calculate percentage in basis points |
+| `basis_points(amount, bps)` | Percentage via basis points |
 | `clamp(value, min, max)` | Clamp value within range |
 
 #### `validation`
+
 | Function | Description |
 |---|---|
-| `require_positive(amount)` | Panic if amount <= 0 |
+| `require_positive(amount)` | Panic if amount ≤ 0 |
 | `require_max(amount, max)` | Panic if amount exceeds max |
 | `require_not_expired(ledger, deadline)` | Panic if deadline passed |
 
 #### `events`
+
 | Function | Description |
 |---|---|
 | `emit_transfer(env, from, to, amount)` | Emit a transfer event |
@@ -232,45 +191,45 @@ Build an unsigned token mint transaction (requires admin).
 
 ---
 
-## Running Tests
+## Project Structure
 
-```bash
-# TypeScript
-cd packages/js
-npm install
-npm test
-
-# Rust
-cd packages/rust
-cargo test
+```
+Stellar-Soroban-Utilities/
+├── packages/
+│   ├── js/
+│   │   └── src/
+│   │       ├── contract.ts     # Invocation & submission
+│   │       ├── encoding.ts     # XDR / ScVal encode & decode
+│   │       ├── fees.ts         # Fee estimation
+│   │       ├── testing.ts      # Friendbot & test helpers
+│   │       ├── token.ts        # SEP-41 token helpers
+│   │       ├── errors.ts       # Error parsing
+│   │       └── index.ts        # Entry point
+│   └── rust/
+│       └── src/
+│           ├── access.rs       # Admin access control
+│           ├── math.rs         # Safe arithmetic
+│           ├── events.rs       # Event emitters
+│           ├── validation.rs   # Input validation
+│           └── lib.rs
+├── examples/
+│   ├── invoke-contract.ts
+│   └── encoding-demo.ts
+├── CONTRIBUTING.md
+└── README.md
 ```
 
 ---
 
-## Technical Approach
+## Running Tests
 
-- Core Languages: Rust & TypeScript
-- Integration: Soroban SDK and Stellar Horizon / RPC APIs
-- Distribution: NPM package + Rust crate
-- Testing: Local sandbox + Stellar testnet via Friendbot
+```bash
+# TypeScript
+cd packages/js && npm install && npm test
 
----
-
-## Target Users
-
-- Smart contract developers on Soroban
-- Web3 engineers building dApps on Stellar
-- Hackathon participants and open-source contributors
-- Teams optimizing blockchain performance and transaction costs
-
----
-
-## Value Proposition
-
-- Reduced development complexity — stop rewriting the same boilerplate
-- Faster implementation of smart contract interactions
-- Improved code quality and reliability through well-tested utilities
-- Streamlined testing and debugging workflows
+# Rust
+cd packages/rust && cargo test
+```
 
 ---
 
@@ -285,8 +244,8 @@ cargo test
 - [ ] CLI tool for contract inspection and invocation
 - [ ] Advanced debugging dashboard
 - [ ] Plugin support for custom utility modules
-- [ ] Integration with Stellar Soroban Kits for a full dev suite
 - [ ] Browser-compatible ESM bundle
+- [ ] Integration with Stellar Soroban Kits
 
 ---
 
@@ -306,4 +265,4 @@ MIT — free to use, modify, and distribute.
 
 - [Stellar SDK (JS)](https://github.com/stellar/js-stellar-sdk)
 - [Soroban Docs](https://soroban.stellar.org/docs)
-- [Stellar Mart](https://github.com/Faisat-Creator/Stellar-Mart) — decentralized marketplace powered by Stellar
+- [Stellar Mart](https://github.com/Faisat-Creator/Stellar-Mart) — decentralized marketplace on Stellar
